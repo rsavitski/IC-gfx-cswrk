@@ -12,5 +12,8 @@
 *.la
 *.a
 
+# Vim
+*.swp
+
 # Specific to project
 cgRender

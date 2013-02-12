@@ -1,21 +1,26 @@
 #include <GL/glut.h>
-#include <stdlib.h>
 
-using namespace std;
+
+#include <stdlib.h>
 
 #include <fstream>
 #include <iostream>
 
 
+using namespace std;
+
 
 void init() 
-{
-	glClearColor (0.0, 0.0, 0.0, 0.0);
+{	
 	cout << "init" << endl;
-
+	
+	glClearColor (0.0, 0.0, 0.0, 0.0);
+	
+	glShadeModel (GL_SMOOTH);	// interpolation
+	
+	glEnable(GL_DEPTH_TEST); // Z-buffer
+	
 	/*
-	   glShadeModel (GL_SMOOTH);
-
 	// Enable lighting
 	glEnable (GL_LIGHTING);
 	glEnable (GL_LIGHT0);
@@ -27,17 +32,26 @@ void init()
 	// Set material parameters
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  MaterialSpecular);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, MaterialShininess);
-
-	// Enable Z-buffering
-	glEnable(GL_DEPTH_TEST);
 	 */
 }
 
 void display(void)
 {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	cout << "display" << endl;
+	
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	
+	glBegin(GL_POLYGON);
+		glColor3f(1,0,0);
+		glVertex3f(1,1,1);
+		glColor3f(0,1,0);
+		glVertex3f(0,1,1);
+		glColor3f(0,0,1);
+		glVertex3f(1,0,1);
+	glEnd();
+
+	glutSwapBuffers();
 	/*
 	   for (all polygons)
 	   glBegin(GL_POLYGON);
@@ -52,9 +66,8 @@ void display(void)
 	glEnd();
 	}
 	glFlush ();
-	//  or, if double buffering is used,
-	//  glutSwapBuffers();
-	 */
+	*/
+	 
 	}
 
 void reshape (int w, int h)
@@ -62,14 +75,16 @@ void reshape (int w, int h)
 	cout << "reshape" << endl;
 
 	glViewport (0, 0, (GLsizei) w, (GLsizei) h); 
-	/*
+
 	   glMatrixMode (GL_PROJECTION);
 	   glLoadIdentity();
-	   gluPerspective(fovy, aspect, near, far);
+	   gluPerspective(90, 1, 0.2, 10);
 	   glMatrixMode (GL_MODELVIEW);
 	   glLoadIdentity();
-	   gluLookAt(eyex, eyey, eyez, centerx, centery, centerz, upx, upy, upz);
-	 */
+	   gluLookAt(0, 0, 3, 
+	   			 0, 0, 0,
+	   			 0, 1, 0);
+	
 }
 
 void keyboard(unsigned char key, int x, int y)
@@ -86,18 +101,16 @@ int main(int argc, char** argv)
 {
 	// Initialize graphics window
 	glutInit(&argc, argv);
-	glutInitDisplayMode (GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH); 
-	//  Or, can use double buffering
-	//  glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH); 
+	glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);	// double buffered
 
-	glutInitWindowSize (256, 256); 
-	glutInitWindowPosition (0, 0);
-	glutCreateWindow (argv[0]);
+	glutInitWindowSize (768, 768); 
+	glutInitWindowPosition (-1, -1);	// window manager determines position
+	glutCreateWindow ("GFX");
 
-	// Initialize OpenGL
+	// Initialise state
 	init();
 
-	// Initialize callback functions
+	// Attach callbacks
 	glutDisplayFunc(display); 
 	glutReshapeFunc(reshape);
 	glutKeyboardFunc(keyboard);
