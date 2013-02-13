@@ -94,29 +94,37 @@ void init(void)
 	
 	glEnable(GL_NORMALIZE);		// auto-normalisation, shouldn't affect performance due to display list architecture
 	glEnable(GL_DEPTH_TEST);	// Z-buffer
+
 	
-	
-	// TODO: fix
-
-	GLfloat pos1[] = {0,2,1,0};	
-	GLfloat temp[] = {0.4,1,1,1.0};
-	GLfloat temp2[] = {0.4,0.8,0.4,1.0};
-	GLfloat temp3[] = {1,0.4,0.1,1.0};
-
-	GLfloat shn[] = {10};
-	//TODO
-
 	// Enable lighting
 	glEnable (GL_LIGHTING);
 	glEnable (GL_LIGHT0);
-	glLightfv(GL_LIGHT0, GL_POSITION, pos1);
-	glLightfv(GL_LIGHT0, GL_AMBIENT,  temp);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE,  temp2);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, temp3);
+	
+	// light and material parameters
+	GLfloat light_pos[] = {0.0, 2.0, 1.0, 0.0};	// position
+	GLfloat light_Ka[] = {0.4, 0.6 ,0.4, 1.0};	// ambient
+	GLfloat light_Kd[] = {1.0, 1.0, 1.0, 1.0};	// diffuse
+	GLfloat light_Ks[] = {0.5, 0.5, 0.5, 1.0};	// specular
 
-	// Set material parameters
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  temp2);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, shn);
+	GLfloat material_Ka[] = {0.4, 0.3, 0.3, 1.0};	// ambient reflectance
+	GLfloat material_Kd[] = {0.4, 0.4, 0.3, 1.0};	// diffuse reflectance
+	GLfloat material_Ks[] = {0.7, 0.3, 0.3, 1.0};	// specular reflectance
+	GLfloat material_Ke[] = {0.0, 0.0, 0.0, 0.0};	// emitted coefficients
+	GLfloat material_Se[] = {10};	// specular exponent
+	
+	// light0 properties
+	glLightfv(GL_LIGHT0, GL_POSITION, light_pos);
+	glLightfv(GL_LIGHT0, GL_AMBIENT,  light_Ka);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE,  light_Kd);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, light_Ks);
+
+	// material parameters
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, material_Ka);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, material_Kd);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, material_Ks);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, material_Ke);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, material_Se);
+
 	
 	// create display list (very efficient as the geometry is static)
 	facelist = glGenLists(1);
@@ -169,7 +177,7 @@ void reshape(int w, int h)
 	
 	glMatrixMode (GL_MODELVIEW);
 	glLoadIdentity();	//TODO
-	gluLookAt(0.4, 0, -0.02,	// camera pos
+	gluLookAt(0.5, 0, -0.02,	// camera pos
 			  0, -0.1, 0,	// look at pos
 			  0, 1, 0);	// up vector
 	
