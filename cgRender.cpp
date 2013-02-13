@@ -16,9 +16,10 @@
 	very efficient as the data is cached on the GPU memory and is redrawn with one
 	function call */
 
-/* Note: only handling triangle polys for this exercise */
 
 /* TODO: kill. Scratch area
+
+TODO: parametrise all dimensionalities in macros?
 
 array for each of: coord data, normal data, tex data (2 components)
 
@@ -54,10 +55,14 @@ void cleanup();	// memory cleanup registered with atexit()
 
 // Globals
 GLuint facelist = 0;	// display list handle
+
 GLfloat *vertCoordArr = NULL;	// (xyz)[]
 GLfloat *vertNormArr = NULL;	// (Nx, Ny, Nz)[]
 GLfloat *vertTexArr = NULL;		// (Tx, Ty)[]
 GLuint *polyArr = NULL; 		// (vertex indices for triangles)[] // Since assuming triangle poly data
+
+long int vertNum = 0;
+long int polyNum = 0;
 
 /////////////////////////////////////////////////////////////////////////
 
@@ -119,6 +124,21 @@ void init()
 	// compile the display list
 	glNewList(facelist, GL_COMPILE);
 		glBegin(GL_POLYGON);
+			for (int i=0; i<polyNum*3; ++i)
+			{
+				float col = (float)(rand()%100)/100;
+				glColor3f(col,col,col);
+				//glColor3f(1,1,0);
+				GLuint vIdx = polyArr[i];
+				glVertex3f(vertCoordArr[vIdx*3], vertCoordArr[vIdx*3+1], vertCoordArr[vIdx*3+2]);
+			}
+		glEnd();
+	glEndList();
+	
+	/*
+	// compile the display list
+	glNewList(facelist, GL_COMPILE);
+		glBegin(GL_POLYGON);
 			glColor3f(1,1,0);
 			glVertex3f(1,1,1);
 			glColor3f(0,1,0);
@@ -126,7 +146,7 @@ void init()
 			glColor3f(0,0,1);
 			glVertex3f(1,0,1);
 		glEnd();
-	glEndList();
+	glEndList();*/
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -164,12 +184,12 @@ void reshape(int w, int h)
 
 	glMatrixMode (GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(90, 1, 0.2, 10);
+	gluPerspective(45, 1, 0.2, 10);
 	
 	glMatrixMode (GL_MODELVIEW);
 	glLoadIdentity();
-	gluLookAt(0, 0, 3,	// camera pos
-			  0, 0, 0,	// look at pos
+	gluLookAt(0.4, 0, -0.02,	// camera pos
+			  0, -0.1, 0,	// look at pos
 			  0, 1, 0);	// up vector
 	
 }
@@ -214,7 +234,7 @@ void loadData()
 
 
 	// Vertex data
-	long int vertNum = 0;
+	vertNum = 0;
 	fscanf(vtk_fdesc, "%s %ld %s", buf, &vertNum, buf);
 
 	// global vertex coordinate, normal, texture arrays malloc
@@ -230,7 +250,7 @@ void loadData()
 	
 	
 	// Polygon (triangle in this case) data
-	long int polyNum = 0;
+	polyNum = 0;
 	long int cellNum = 0;
 	fscanf(vtk_fdesc, "%s %ld %ld", buf, &polyNum, &cellNum);
 
