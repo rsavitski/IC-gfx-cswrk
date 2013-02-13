@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 // Macros
 #define VTK_FILE_PATH "./data/face.vtk"
@@ -92,7 +93,7 @@ void init(void)
 	
 	glShadeModel (GL_SMOOTH);	// interpolation for poly from vertex colors
 	
-	glEnable(GL_NORMALIZE);		// auto-normalisation, shouldn't affect performance due to display list architecture
+	//glEnable(GL_NORMALIZE);		// auto-normalisation, shouldn't affect performance due to display list architecture
 	glEnable(GL_DEPTH_TEST);	// Z-buffer
 
 	
@@ -199,8 +200,6 @@ void keyboard(unsigned char key, int x, int y)
 
 void loadData(void)
 {
-	printf("Loading data\n"); //TODO: kill
-
 	// Read VTK file for vertex, poly and tex data
 	FILE *vtk_fdesc = fopen(VTK_FILE_PATH, "r");
 	if (vtk_fdesc == NULL)
@@ -283,16 +282,24 @@ void loadData(void)
 		vertNormArr[vertIndx3*3+1] += normal[1];
 		vertNormArr[vertIndx3*3+2] += normal[2];
 	}
-/*
-	// TODO: normalise all normals
+
+
+	// Normalise all normals
 	for (int i=0; i<vertNum; i++)
 	{
+		// k: start of 3-float tuple with Nx,Ny,Nz components
 		int k = i*3;
 
+		GLfloat nx = vertNormArr[k];
+		GLfloat ny = vertNormArr[k+1];
+		GLfloat nz = vertNormArr[k+2];
 
-
-		printf("norm: %f ", vertNormArr[k]);
-	}*/
+		GLfloat mag = sqrt(nx*nx + ny*ny + nz*nz);
+		
+		vertNormArr[k] /= mag;
+		vertNormArr[k+1] /= mag;
+		vertNormArr[k+2] /= mag;
+	}
 	
 	
 	// TODO:	TEXTURE DATA PROCESSING HERE
