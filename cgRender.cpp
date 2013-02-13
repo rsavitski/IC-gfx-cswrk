@@ -200,9 +200,10 @@ void loadData()
 		exit(-1);
 	}
 
-	// misc buffer variables for reading data
-	char *buf = (char*)malloc(1024);	// getline might resize
-	size_t bufsize = 1024;	// getline might resize
+	// misc buffer variables for reading data, getline calls might resize both as needed
+	char *buf = NULL;
+	if (!(buf = (char*)malloc(1024))) { fprintf(stderr, "malloc failed\n"); exit(-1); }
+	size_t bufsize = 1024;
 
 
 	// Consume VTK header, 4 lines
@@ -217,10 +218,10 @@ void loadData()
 	fscanf(vtk_fdesc, "%s %ld %s", buf, &vertNum, buf);
 
 	// global vertex coordinate, normal, texture arrays malloc
-	vertCoordArr = (GLfloat*)malloc(vertNum*3*sizeof(GLfloat));
-	vertNormArr = (GLfloat*)malloc(vertNum*3*sizeof(GLfloat));
-	vertTexArr = (GLfloat*)malloc(vertNum*2*sizeof(GLfloat));
-	
+	if (!(vertCoordArr = (GLfloat*)malloc(vertNum*3*sizeof(GLfloat)))) { fprintf(stderr, "malloc failed\n"); exit(-1); }
+	if (!(vertNormArr  = (GLfloat*)malloc(vertNum*3*sizeof(GLfloat)))) { fprintf(stderr, "malloc failed\n"); exit(-1); }
+	if (!(vertTexArr   = (GLfloat*)malloc(vertNum*2*sizeof(GLfloat)))) { fprintf(stderr, "malloc failed\n"); exit(-1); }
+
 	// parse data
 	for(int i=0; i<vertNum*3; ++i)
 	{
@@ -234,7 +235,7 @@ void loadData()
 	fscanf(vtk_fdesc, "%s %ld %ld", buf, &polyNum, &cellNum);
 
 	// global polygon array malloc
-	polyArr = (GLuint*)malloc(polyNum*3*sizeof(GLuint));
+	if (!(polyArr = (GLuint*)malloc(polyNum*3*sizeof(GLuint)))) { fprintf(stderr, "malloc failed\n"); exit(-1); }
 		
 	// parse data
 	int polysize = 0; // NB: assumed to always be 3 in this exercise (as per data provided), varying poly sizes require dynamic arrays
@@ -245,13 +246,13 @@ void loadData()
 		fscanf(vtk_fdesc, "%u ", &polyArr[i+1]);
 		fscanf(vtk_fdesc, "%u ", &polyArr[i+2]);
 	}
-
+	/*
 	for (int i=0; i<polyNum*3; ++i)
 	{
 		printf("%u\n", polyArr[i]);
 	}
-
-	/*
+	*/
+	
 	// TODO:	TEXTURE DATA PROCESSING HERE
 	//getline(&buf, &bufsize, vtk_fdesc); 
 	//getline(&buf, &bufsize, vtk_fdesc); 
@@ -259,11 +260,9 @@ void loadData()
 
 	// temp test
 	//fscanf(vtk_fdesc, "%f ", &vertTexArr[2]);
-	//printf("%f\n", vertTexArr[2]);
-	//(vertTexArr==NULL)?printf("NULLZ\n"):printf("%p\n", vertTexArr);
 
 	// cleanup	
-	free(buf);*/
+	free(buf);
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -271,9 +270,11 @@ void loadData()
 void cleanup()
 {
 	// function registered with atexit()
-	//free(vertCoordArr);
-	//free(vertNormArr);
+	
+	free(vertCoordArr);
+	free(vertNormArr);
 	free(vertTexArr);
-	//free(polyArr);
-	printf("leaving so soon?\n");
+	free(polyArr);
+	
+	printf("leaving so soon?\n"); //TODO: kill
 }
