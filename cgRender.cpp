@@ -1,36 +1,22 @@
 #include <GL/glut.h>
 
-
 #include <stdlib.h>
 #include <string.h>
-
-#include <fstream>
-#include <iostream>
+#include <stdio.h>
 
 // Macros
 #define VTK_FILE_PATH "./data/face.vtk"
 
-//using namespace std;
 
 /* Using precompiled OpenGL lists for rendering since the geometry never changes,
 	very efficient as the data is cached on the GPU memory and is redrawn with one
 	function call */
-
+//c99 with c++ comments, display lists
 
 /* TODO: kill. Scratch area
 
 TODO: parametrise all dimensionalities in macros?
 
-array for each of: coord data, normal data, tex data (2 components)
-
-read vertex n -> malloc all three arrays
-read vertex xyz into coord array
-
-array for poly data: (3 tuple of vertice indexes)
-read poly n -> malloc poly array
-for each poly:
-	read vertex xyz's, construct two vectors, get normal, no need to normalise at this stage
-	go to each vertex normal array, add the normal components into the appropriate accumulators
 
 once done, iterate over <vertex normal array> and normalise all vectors
 
@@ -44,14 +30,14 @@ PS. might want to compute average xyz of vertex coords and the bounding box for 
 
 
 // GLUT callbacks
-void init();
-void display();
+void init(void);
+void display(void);
 void reshape(int w, int h);
 void keyboard(unsigned char key, int x, int y);
 
 // Other prototypes
-void loadData();
-void cleanup();	// memory cleanup registered with atexit()
+void loadData(void);
+void cleanup(void);	// memory cleanup registered with atexit()
 
 // Utility
 void cross3f(GLfloat v1[3], GLfloat v2[3], GLfloat* out);
@@ -86,28 +72,6 @@ int main(int argc, char** argv)
 	// Initialise state
 	init();
 
-	//TODO: TEMP
-/*
-	printf("==========MAIN DEBUG===========\n\n");
-
-	GLfloat barbl[3] = {1,2,3};
-	GLfloat vuhdl[3] = {2,3,4};
-	GLfloat res[3] = {0,0,0};
-	
-	cross3f(barbl, vuhdl, res);
-
-	printf("%f %f %f\n", res[0], res[1], res[2]);
-	// TODO:
-	
-	GLfloat pt1[3] = {1,3,7};
-	GLfloat pt2[3] = {2,6,3};
-	GLfloat pt3[3] = {9,7,8};
-	GLfloat res2[3] = {0,0,0};
-	triangleNormal_unnormalised(pt1,pt2,pt3,res2);
-	printf("%f %f %f\n", res2[0], res2[1], res2[2]);
-	 
-	printf("==========MAIN DEBUG===========\n\n");
-*/
 	// Attach callbacks
 	glutDisplayFunc(display); 
 	glutReshapeFunc(reshape);
@@ -122,22 +86,25 @@ int main(int argc, char** argv)
 
 /////////////////////////////////////////////////////////////////////////
 
-void init() 
+void init(void) 
 {	
 	glClearColor (0.0, 0.0, 0.0, 0.0);
 	
 	glShadeModel (GL_SMOOTH);	// interpolation for poly from vertex colors
 	
+	glEnable(GL_NORMALIZE);		// auto-normalisation, shouldn't affect performance due to display list architecture
 	glEnable(GL_DEPTH_TEST);	// Z-buffer
 	
+	
+	// TODO: fix
+
 	GLfloat pos1[] = {0,2,1,0};	
 	GLfloat temp[] = {0.4,1,1,1.0};
-	GLfloat temp2[] = {0.4,0.5,0.4,1.0};
+	GLfloat temp2[] = {0.4,0.8,0.4,1.0};
 	GLfloat temp3[] = {1,0.4,0.1,1.0};
 
 	GLfloat shn[] = {10};
-
-	glEnable(GL_NORMALIZE);
+	//TODO
 
 	// Enable lighting
 	glEnable (GL_LIGHTING);
@@ -159,47 +126,28 @@ void init()
 		for (int i=0; i<polyNum; ++i)
 		{
 			glBegin(GL_POLYGON);
-				
-				
-				float col = (float)(rand()%100)/100;
-				glColor3f(col,col,col);
-				
 				// pick the three vertex indices
 				GLuint vertIndx1 = polyArr[i*3];
 				GLuint vertIndx2 = polyArr[i*3+1];
 				GLuint vertIndx3 = polyArr[i*3+2];
 
-				glNormal3f(vertNormArr[vertIndx1*3],vertNormArr[vertIndx1*3+1],vertNormArr[vertIndx1*3+2]);
-				// pick the xyz coordinates for each vertex
+				// pick normals and coordinates for all vertices
+				glNormal3f(vertNormArr[vertIndx1*3], vertNormArr[vertIndx1*3+1], vertNormArr[vertIndx1*3+2]);
 				glVertex3f(vertCoordArr[vertIndx1*3], vertCoordArr[vertIndx1*3+1], vertCoordArr[vertIndx1*3+2]);
 				
-				glNormal3f(vertNormArr[vertIndx2*3],vertNormArr[vertIndx2*3+1],vertNormArr[vertIndx2*3+2]);
+				glNormal3f(vertNormArr[vertIndx2*3], vertNormArr[vertIndx2*3+1], vertNormArr[vertIndx2*3+2]);
 				glVertex3f(vertCoordArr[vertIndx2*3], vertCoordArr[vertIndx2*3+1], vertCoordArr[vertIndx2*3+2]);
 				
-				glNormal3f(vertNormArr[vertIndx3*3],vertNormArr[vertIndx3*3+1],vertNormArr[vertIndx3*3+2]);
+				glNormal3f(vertNormArr[vertIndx3*3], vertNormArr[vertIndx3*3+1], vertNormArr[vertIndx3*3+2]);
 				glVertex3f(vertCoordArr[vertIndx3*3], vertCoordArr[vertIndx3*3+1], vertCoordArr[vertIndx3*3+2]);
 			glEnd();
 		}
 	glEndList();
-	
-	/*
-	// compile the display list
-	glNewList(facelist, GL_COMPILE);
-		glBegin(GL_POLYGON);
-			glNormal3f(0.4,0.3,0.3);
-			//glColor3f(1,1,0);
-			glVertex3f(0.01,-0.01,0.01);
-			//glColor3f(0,1,0);
-			glVertex3f(0,-0.1,0.01);
-			//glColor3f(0,0,1);
-			glVertex3f(0.1,0,0.1);
-		glEnd();
-	glEndList();*/
 }
 
 /////////////////////////////////////////////////////////////////////////
 
-void display()
+void display(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
@@ -220,7 +168,7 @@ void reshape(int w, int h)
 	gluPerspective(45, 1, 0.2, 10);
 	
 	glMatrixMode (GL_MODELVIEW);
-	glLoadIdentity();
+	glLoadIdentity();	//TODO
 	gluLookAt(0.4, 0, -0.02,	// camera pos
 			  0, -0.1, 0,	// look at pos
 			  0, 1, 0);	// up vector
@@ -241,7 +189,7 @@ void keyboard(unsigned char key, int x, int y)
 
 /////////////////////////////////////////////////////////////////////////
 
-void loadData()
+void loadData(void)
 {
 	printf("Loading data\n"); //TODO: kill
 
@@ -301,10 +249,10 @@ void loadData()
 	}
 	
 
-	// Calculate and sum vertex normalsi //TODO: borken 000001 000000110?
+	// Calculate and sum normals into relevant vertices (not normalised)
 	for (int i=0; i<polyNum; ++i)
 	{
-		GLfloat normal[3] = {0};
+		GLfloat normal[3] = {0,0,0};
 	
 		// pick indexes of the three vertices making up the poly	
 		GLuint vertIndx1 = polyArr[i*3];
@@ -312,7 +260,7 @@ void loadData()
 		GLuint vertIndx3 = polyArr[i*3+2];
 		
 		// get normal (not normalised)
-		triangleNormal_unnormalised(&vertCoordArr[vertIndx1*3],&vertCoordArr[vertIndx2*3],&vertCoordArr[vertIndx3*3], normal);
+		triangleNormal_unnormalised(&vertCoordArr[vertIndx1*3], &vertCoordArr[vertIndx2*3], &vertCoordArr[vertIndx3*3], normal);
 		
 		// add normal components to all relevant vertices (results in a unnormalised average of surface normals at vertices)
 		vertNormArr[vertIndx1*3] += normal[0];
@@ -338,22 +286,6 @@ void loadData()
 		printf("norm: %f ", vertNormArr[k]);
 	}*/
 	
-	/*for (int i=0; i<polyNum; ++i)
-	{
-		GLfloat tempres[3] = {0};
-		
-		GLuint vertIndx1 = polyArr[i*3];
-		GLuint vertIndx2 = polyArr[i*3+1];
-		GLuint vertIndx3 = polyArr[i*3+2];
-
-		printf("vertIndx: %d, %d, %d\n", vertIndx1, vertIndx2, vertIndx3);
-		printf("xyz for indx1: %f, %f, %f\n", vertCoordArr[vertIndx1*3], vertCoordArr[vertIndx1*3+1], vertCoordArr[vertIndx1*3+2]);
-		printf("xyz for indx2: %f, %f, %f\n", vertCoordArr[vertIndx2*3], vertCoordArr[vertIndx2*3+1], vertCoordArr[vertIndx2*3+2]);
-		printf("xyz for indx3: %f, %f, %f\n", vertCoordArr[vertIndx3*3], vertCoordArr[vertIndx3*3+1], vertCoordArr[vertIndx3*3+2]);
-
-		triangleNormal_unnormalised(&vertCoordArr[vertIndx1*3],&vertCoordArr[vertIndx2*3],&vertCoordArr[vertIndx3*3], tempres);
-		printf("normal %d returned: %f10, %f10, %f10\n\n", i, tempres[0],tempres[1],tempres[2]);
-	}*/
 	
 	// TODO:	TEXTURE DATA PROCESSING HERE
 	//getline(&buf, &bufsize, vtk_fdesc); 
@@ -369,7 +301,7 @@ void loadData()
 
 /////////////////////////////////////////////////////////////////////////
 
-void cleanup()
+void cleanup(void)
 {
 	// function registered with atexit()
 	
@@ -378,7 +310,7 @@ void cleanup()
 	free(vertTexArr);
 	free(polyArr);
 	
-	printf("leaving so soon?\n"); //TODO: kill
+	printf("leaving so soon?\n");
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -407,10 +339,6 @@ void triangleNormal_unnormalised(GLfloat pt1[3], GLfloat pt2[3], GLfloat pt3[3],
 	v2[1] = pt1[1] - pt3[1];
 	v2[2] = pt1[2] - pt3[2];
 
-	// TODO: DEBUG printf
-	//printf("trigNormal first vector: (%f10, %f10, %f10)\n", v1[0], v1[1], v1[2]);
-	//printf("trigNormal second vector: (%f10, %f10, %f10)\n", v2[0], v2[1], v2[2]);
-	
 	// calculate cross product (writes over out)
 	cross3f(v1,v2,out);
 }
