@@ -53,6 +53,10 @@ void keyboard(unsigned char key, int x, int y);
 void loadData();
 void cleanup();	// memory cleanup registered with atexit()
 
+// Utility
+void cross3f(GLfloat v1[3], GLfloat v2[3], GLfloat* out);
+void triangleNormal_unnormalised(GLfloat pt1[3], GLfloat pt2[3], GLfloat pt3[3], GLfloat* out);
+
 // Globals
 GLuint facelist = 0;	// display list handle
 
@@ -82,6 +86,24 @@ int main(int argc, char** argv)
 	// Initialise state
 	init();
 
+	//TODO: TEMP
+	GLfloat barbl[3] = {1,2,3};
+	GLfloat vuhdl[3] = {2,3,4};
+	GLfloat res[3] = {0,0,0};
+	
+	cross3f(barbl, vuhdl, res);
+
+	printf("%f %f %f\n", res[0], res[1], res[2]);
+	// TODO:
+	
+	GLfloat pt1[3] = {1,3,7};
+	GLfloat pt2[3] = {2,6,3};
+	GLfloat pt3[3] = {9,7,8};
+	GLfloat res2[3] = {0,0,0};
+	triangleNormal_unnormalised(pt1,pt2,pt3,res2);
+	printf("%f %f %f\n", res2[0], res2[1], res2[2]);
+	 
+
 	// Attach callbacks
 	glutDisplayFunc(display); 
 	glutReshapeFunc(reshape);
@@ -104,7 +126,7 @@ void init()
 	
 	glEnable(GL_DEPTH_TEST);	// Z-buffer
 	
-	/*
+/*	
 	// Enable lighting
 	glEnable (GL_LIGHTING);
 	glEnable (GL_LIGHT0);
@@ -116,23 +138,31 @@ void init()
 	// Set material parameters
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  MaterialSpecular);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, MaterialShininess);
-	 */
+*/	
 
 	// create display list (very efficient as the geometry is static)
 	facelist = glGenLists(1);
 
 	// compile the display list
 	glNewList(facelist, GL_COMPILE);
-		glBegin(GL_POLYGON);
-			for (int i=0; i<polyNum*3; ++i)
-			{
+		for (int i=0; i<polyNum; ++i)
+		{
+			glBegin(GL_POLYGON);
+				
 				float col = (float)(rand()%100)/100;
 				glColor3f(col,col,col);
-				//glColor3f(1,1,0);
-				GLuint vIdx = polyArr[i];
-				glVertex3f(vertCoordArr[vIdx*3], vertCoordArr[vIdx*3+1], vertCoordArr[vIdx*3+2]);
-			}
-		glEnd();
+				
+				// pick the three vertex indices
+				GLuint vertIndx1 = polyArr[i*3];
+				GLuint vertIndx2 = polyArr[i*3+1];
+				GLuint vertIndx3 = polyArr[i*3+2];
+
+				// pick the xyz coordinates for each vertex
+				glVertex3f(vertCoordArr[vertIndx1*3], vertCoordArr[vertIndx1*3+1], vertCoordArr[vertIndx1*3+2]);
+				glVertex3f(vertCoordArr[vertIndx2*3], vertCoordArr[vertIndx2*3+1], vertCoordArr[vertIndx2*3+2]);
+				glVertex3f(vertCoordArr[vertIndx3*3], vertCoordArr[vertIndx3*3+1], vertCoordArr[vertIndx3*3+2]);
+			glEnd();
+		}
 	glEndList();
 	
 	/*
@@ -222,9 +252,9 @@ void loadData()
 	vertNum = 0;
 	fscanf(vtk_fdesc, "%s %ld %s", buf, &vertNum, buf);
 
-	// global vertex coordinate, normal, texture arrays malloc
+	// global vertex coordinate, normal (zeroed via calloc), texture arrays malloc
 	if (!(vertCoordArr = (GLfloat*)malloc(vertNum*3*sizeof(GLfloat)))) { fprintf(stderr, "malloc failed\n"); exit(-1); }
-	if (!(vertNormArr  = (GLfloat*)malloc(vertNum*3*sizeof(GLfloat)))) { fprintf(stderr, "malloc failed\n"); exit(-1); }
+	if (!(vertNormArr  = (GLfloat*)calloc((size_t)vertNum*3, sizeof(GLfloat)))) { fprintf(stderr, "calloc failed\n"); exit(-1); }
 	if (!(vertTexArr   = (GLfloat*)malloc(vertNum*2*sizeof(GLfloat)))) { fprintf(stderr, "malloc failed\n"); exit(-1); }
 
 	// parse data
@@ -251,12 +281,26 @@ void loadData()
 		fscanf(vtk_fdesc, "%u ", &polyArr[i+1]);
 		fscanf(vtk_fdesc, "%u ", &polyArr[i+2]);
 	}
-	/*
+	
+
+	// Calculate and sum vertex normals
 	for (int i=0; i<polyNum*3; ++i)
-	{
-		printf("%u\n", polyArr[i]);
-	}
-	*/
+	{/*
+		GLfloat normal[3] = {0};
+		
+		GLuint vIdx = polyArr[i];
+
+		triangleNormal_unnormalised(vertCoordArr[vIdx*3],
+		vertCoordArr[vIdx*3+1],
+		vertCoordArr[vIdx*3+2],
+		normal);
+
+		//polyArr[i+1 +2]
+
+				glVertex3f(vertCoordArr[vIdx*3], vertCoordArr[vIdx*3+1], vertCoordArr[vIdx*3+2]);
+	//	printf("%u\n", polyArr[i]);
+	*/}
+	
 	
 	// TODO:	TEXTURE DATA PROCESSING HERE
 	//getline(&buf, &bufsize, vtk_fdesc); 
@@ -282,4 +326,34 @@ void cleanup()
 	free(polyArr);
 	
 	printf("leaving so soon?\n"); //TODO: kill
+}
+
+/////////////////////////////////////////////////////////////////////////
+
+void cross3f(GLfloat v1[3], GLfloat v2[3], GLfloat* out)
+{
+	// cross product in 3 dimensions
+	out[0] = v1[1]*v2[2] - v1[2]*v2[1];
+	out[1] = v1[2]*v2[0] - v1[0]*v2[2];
+	out[2] = v1[0]*v2[1] - v1[1]*v2[0];
+}
+
+/////////////////////////////////////////////////////////////////////////
+
+void triangleNormal_unnormalised(GLfloat pt1[3], GLfloat pt2[3], GLfloat pt3[3], GLfloat* out)
+{
+	// edge vectors
+	GLfloat v1[3] = {0};
+	GLfloat v2[3] = {0};
+
+	v1[0] = pt1[0] - pt2[0];
+	v1[1] = pt1[1] - pt2[1];
+	v1[2] = pt1[2] - pt2[2];
+
+	v2[0] = pt1[0] - pt3[0];
+	v2[1] = pt1[1] - pt3[1];
+	v2[2] = pt1[2] - pt3[2];
+
+	// calculate cross product (writes over out)
+	cross3f(v1,v2,out);
 }
