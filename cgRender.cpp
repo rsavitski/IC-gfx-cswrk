@@ -155,25 +155,10 @@ void display()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
+	// call precompiled display list
 	glCallList(facelist);
 
 	glutSwapBuffers();
-	/*
-	   for (all polygons)
-	   glBegin(GL_POLYGON);
-	   for (all vertices of polygon)
-	// Define texture coordinates of vertex
-	glTexCoord2f(...);
-	// Define normal of vertex
-	glNormal3f(...);
-	// Define coordinates of vertex
-	glVertex3f(...);
-	}
-	glEnd();
-	}
-	glFlush ();
-	*/
-	 
 }
 
 /////////////////////////////////////////////////////////////////////////
