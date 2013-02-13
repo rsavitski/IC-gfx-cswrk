@@ -130,28 +130,36 @@ void init()
 	
 	glEnable(GL_DEPTH_TEST);	// Z-buffer
 	
-/*	
+	GLfloat pos1[] = {0,2,1,0};	
+	GLfloat temp[] = {0.4,1,1,1.0};
+	GLfloat temp2[] = {0.4,0.5,0.4,1.0};
+	GLfloat temp3[] = {1,0.4,0.1,1.0};
+
+	GLfloat shn[] = {10};
+
+	glEnable(GL_NORMALIZE);
+
 	// Enable lighting
 	glEnable (GL_LIGHTING);
 	glEnable (GL_LIGHT0);
-	glLightfv(GL_LIGHT0, GL_POSITION, LightPosition);
-	glLightfv(GL_LIGHT0, GL_AMBIENT,  LightAmbient);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE,  LightDiffuse);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, LightSpecular);
+	glLightfv(GL_LIGHT0, GL_POSITION, pos1);
+	glLightfv(GL_LIGHT0, GL_AMBIENT,  temp);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE,  temp2);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, temp3);
 
 	// Set material parameters
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  MaterialSpecular);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, MaterialShininess);
-*/	
-
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  temp2);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, shn);
+	
 	// create display list (very efficient as the geometry is static)
 	facelist = glGenLists(1);
 
 	// compile the display list
-	/*glNewList(facelist, GL_COMPILE);
+	glNewList(facelist, GL_COMPILE);
 		for (int i=0; i<polyNum; ++i)
 		{
 			glBegin(GL_POLYGON);
+				
 				
 				float col = (float)(rand()%100)/100;
 				glColor3f(col,col,col);
@@ -161,26 +169,32 @@ void init()
 				GLuint vertIndx2 = polyArr[i*3+1];
 				GLuint vertIndx3 = polyArr[i*3+2];
 
+				glNormal3f(vertNormArr[vertIndx1*3],vertNormArr[vertIndx1*3+1],vertNormArr[vertIndx1*3+2]);
 				// pick the xyz coordinates for each vertex
 				glVertex3f(vertCoordArr[vertIndx1*3], vertCoordArr[vertIndx1*3+1], vertCoordArr[vertIndx1*3+2]);
+				
+				glNormal3f(vertNormArr[vertIndx2*3],vertNormArr[vertIndx2*3+1],vertNormArr[vertIndx2*3+2]);
 				glVertex3f(vertCoordArr[vertIndx2*3], vertCoordArr[vertIndx2*3+1], vertCoordArr[vertIndx2*3+2]);
+				
+				glNormal3f(vertNormArr[vertIndx3*3],vertNormArr[vertIndx3*3+1],vertNormArr[vertIndx3*3+2]);
 				glVertex3f(vertCoordArr[vertIndx3*3], vertCoordArr[vertIndx3*3+1], vertCoordArr[vertIndx3*3+2]);
 			glEnd();
 		}
-	glEndList();*/
+	glEndList();
 	
-	
+	/*
 	// compile the display list
 	glNewList(facelist, GL_COMPILE);
 		glBegin(GL_POLYGON);
-			glColor3f(1,1,0);
+			glNormal3f(0.4,0.3,0.3);
+			//glColor3f(1,1,0);
 			glVertex3f(0.01,-0.01,0.01);
-			glColor3f(0,1,0);
+			//glColor3f(0,1,0);
 			glVertex3f(0,-0.1,0.01);
-			glColor3f(0,0,1);
+			//glColor3f(0,0,1);
 			glVertex3f(0.1,0,0.1);
 		glEnd();
-	glEndList();
+	glEndList();*/
 }
 
 /////////////////////////////////////////////////////////////////////////
