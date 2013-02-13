@@ -2,16 +2,21 @@
 
 
 #include <stdlib.h>
+#include <string.h>
 
 #include <fstream>
 #include <iostream>
 
+// Macros
+#define VTK_FILE_PATH "./data/face.vtk"
 
-using namespace std;
+//using namespace std;
 
 /* Using precompiled OpenGL lists for rendering since the geometry never changes,
 	very efficient as the data is cached on the GPU memory and is redrawn with one
 	function call */
+
+/* Note: only handling triangle polys for this exercise */
 
 /* TODO: kill. Scratch area
 
@@ -34,16 +39,57 @@ once done, compile list and gogogo
 
 PS. might want to compute average xyz of vertex coords and the bounding box for setting up camera
 
-(!)
-NB:
-GLfloat types
-
 */
 
 
-GLuint facelist = 0;
+// GLUT callbacks
+void init();
+void display();
+void reshape(int w, int h);
+void keyboard(unsigned char key, int x, int y);
 
+// Other prototypes
+void loadData();
+void cleanup();	// memory cleanup registered with atexit()
 
+// Globals
+GLuint facelist = 0;	// display list handle
+GLfloat *vertCoordArr = NULL;	// (xyz)[]
+GLfloat *vertNormArr = NULL;	// (Nx, Ny, Nz)[]
+GLfloat *vertTexArr = NULL;		// (Tx, Ty)[]
+GLfloat *polyArr = NULL; 		// (vertex indices for triangles)[] // Since assuming triangle poly data
+
+/////////////////////////////////////////////////////////////////////////
+
+int main(int argc, char** argv)
+{
+	// Load vertex, poly and tex data into memory
+	loadData();
+	
+	// Initialize graphics window
+	glutInit(&argc, argv);
+	glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);	// double buffered
+
+	glutInitWindowSize (768, 768); 
+	glutInitWindowPosition (-1, -1);	// window manager determines position
+	glutCreateWindow ("GFX");
+
+	// Initialise state
+	init();
+
+	// Attach callbacks
+	glutDisplayFunc(display); 
+	glutReshapeFunc(reshape);
+	glutKeyboardFunc(keyboard);
+
+	// Attach cleanup function to process termination
+	atexit(cleanup);
+
+	// Start rendering 
+	glutMainLoop();
+}
+
+/////////////////////////////////////////////////////////////////////////
 
 void init() 
 {	
@@ -83,10 +129,10 @@ void init()
 	glEndList();
 }
 
-void display(void)
+/////////////////////////////////////////////////////////////////////////
+
+void display()
 {
-	cout << "display" << endl;
-	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
 	glCallList(facelist);
@@ -108,10 +154,11 @@ void display(void)
 	glFlush ();
 	*/
 	 
-	}
+}
 
-// called on resizing of window
-void reshape (int w, int h)
+/////////////////////////////////////////////////////////////////////////
+
+void reshape(int w, int h)
 {
 	glViewport (0, 0, (GLsizei) w, (GLsizei) h); 
 
@@ -127,7 +174,8 @@ void reshape (int w, int h)
 	
 }
 
-// called with key events
+/////////////////////////////////////////////////////////////////////////
+
 void keyboard(unsigned char key, int x, int y)
 {
 	switch (key) 
@@ -138,24 +186,85 @@ void keyboard(unsigned char key, int x, int y)
 	}
 }
 
-int main(int argc, char** argv)
+/////////////////////////////////////////////////////////////////////////
+
+void loadData()
 {
-	// Initialize graphics window
-	glutInit(&argc, argv);
-	glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);	// double buffered
+	printf("Loading data\n"); //TODO: kill
 
-	glutInitWindowSize (768, 768); 
-	glutInitWindowPosition (-1, -1);	// window manager determines position
-	glutCreateWindow ("GFX");
+	// Read VTK file for vertex, poly and tex data
+	FILE *vtk_fdesc = fopen(VTK_FILE_PATH, "r");
+	if (vtk_fdesc == NULL)
+	{
+		fprintf(stderr, "Can't open VTK at: %s\n", VTK_FILE_PATH);
+		exit(-1);
+	}
 
-	// Initialise state
-	init();
+	// misc buffer variables for reading data
+	char *buf = (char*)malloc(1024);	// getline might resize
+	size_t bufsize = 1024;	// getline might resize
 
-	// Attach callbacks
-	glutDisplayFunc(display); 
-	glutReshapeFunc(reshape);
-	glutKeyboardFunc(keyboard);
 
-	// Start rendering 
-	glutMainLoop();
+	// Consume VTK header, 4 lines
+	getline(&buf, &bufsize, vtk_fdesc); // Note: getline is POSIX.1-2008, available since libc 4.6.27
+	getline(&buf, &bufsize, vtk_fdesc); 
+	getline(&buf, &bufsize, vtk_fdesc); 
+	getline(&buf, &bufsize, vtk_fdesc); 
+
+
+	// Vertex data
+	long int vertNum = 0;
+	fscanf(vtk_fdesc, "%s %ld %s", buf, &vertNum, buf);
+
+	// global vertex coordinate, normal, texture arrays malloc
+	vertCoordArr = (GLfloat*)malloc(vertNum*3*sizeof(GLfloat));
+	vertNormArr = (GLfloat*)malloc(vertNum*3*sizeof(GLfloat));
+	vertTexArr = (GLfloat*)malloc(vertNum*2*sizeof(GLfloat));
+
+	// parse data
+	for(int i=0; i<vertNum*3; ++i)
+	{
+		fscanf(vtk_fdesc, "%f ", &vertCoordArr[i]);
+	}
+	
+
+	// Polygon (triangle in this case) data
+	long int polyNum = 0;
+	long int cellNum = 0;
+	fscanf(vtk_fdesc, "%s %ld %ld", buf, &polyNum, &cellNum);
+
+	// global polygon array malloc
+	polyArr = (GLfloat*)malloc(polyNum*3*sizeof(GLfloat));
+	
+	// parse data
+	int polysize = 0; // NB: assumed to always be 3 in this exercise
+	for(int i=0; i<cellNum; i+=4)
+	{
+		fscanf(vtk_fdesc, "%d ", &polysize);	// throw away
+		fscanf(vtk_fdesc, "%f ", &polyArr[i]);
+		fscanf(vtk_fdesc, "%f ", &polyArr[i+1]);
+		fscanf(vtk_fdesc, "%f ", &polyArr[i+2]);
+	}
+
+	// TODO:	TEXTURE DATA PROCESSING HERE
+	getline(&buf, &bufsize, vtk_fdesc); 
+	printf("%s", buf);
+
+
+	// cleanup	
+	free(buf);
+}
+
+/////////////////////////////////////////////////////////////////////////
+
+void cleanup()
+{
+	// function registered with atexit()
+
+
+	free(vertCoordArr);
+	free(vertNormArr);
+	//free(vertTexArr);
+	free(polyArr);
+	printf("leaving so soon?\n");
 }
