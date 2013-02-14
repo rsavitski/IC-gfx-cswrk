@@ -19,11 +19,7 @@
 
 /* TODO: kill. Scratch area
 
-
-NB: think about normals, can't just sum, need to normalise at each step? (otherwise dominated by longer crossproducts)
-
 TODO list:
-- camera control
 - textures
 
 array for tex data, iterate over it as above
@@ -43,8 +39,8 @@ void cleanup(void);	// memory cleanup registered with atexit()
 
 // Utility
 void cross3f(GLfloat v1[3], GLfloat v2[3], GLfloat* out);
-void normalise3f(GLfloat vin[3], GLfloat vout[3]);
-void triangleNormal_unnormalised(GLfloat pt1[3], GLfloat pt2[3], GLfloat pt3[3], GLfloat* out);
+void normalise3f(GLfloat v[3]);
+void triangleNormal(GLfloat pt1[3], GLfloat pt2[3], GLfloat pt3[3], GLfloat* out);
 
 /////////////////////////////////////////////////////////////////////////
 
@@ -196,6 +192,7 @@ void display(void)
 	// glLightfv(GL_LIGHT0, GL_POSITION, LIGHTPOS);
 
 
+	// TODO
 	glRotatef(rotangle,0.0,1.0,0.0);
 
 	
@@ -308,7 +305,7 @@ void loadData(void)
 	}
 	
 
-	// Calculate and sum normals into relevant vertices (not normalised)
+	// Calculate and sum normals into relevant vertices
 	for (int i=0; i<polyNum; ++i)
 	{
 		GLfloat normal[3] = {0,0,0};
@@ -318,10 +315,10 @@ void loadData(void)
 		GLuint vertIndx2 = polyArr[i*3+1];
 		GLuint vertIndx3 = polyArr[i*3+2];
 		
-		// get normal (not normalised)
-		triangleNormal_unnormalised(&vertCoordArr[vertIndx1*3], &vertCoordArr[vertIndx2*3], &vertCoordArr[vertIndx3*3], normal);
+		// get normal
+		triangleNormal(&vertCoordArr[vertIndx1*3], &vertCoordArr[vertIndx2*3], &vertCoordArr[vertIndx3*3], normal);
 		
-		// add normal components to all relevant vertices (results in a unnormalised average of surface normals at vertices)
+		// add normal components to all relevant vertices (requires one extra pass to renormalise all after summation)
 		vertNormArr[vertIndx1*3] += normal[0];
 		vertNormArr[vertIndx1*3+1] += normal[1];
 		vertNormArr[vertIndx1*3+2] += normal[2];
@@ -341,16 +338,7 @@ void loadData(void)
 	{
 		// k: start of 3-float tuple with Nx,Ny,Nz components
 		int k = i*3;
-
-		GLfloat nx = vertNormArr[k];
-		GLfloat ny = vertNormArr[k+1];
-		GLfloat nz = vertNormArr[k+2];
-
-		GLfloat mag = sqrt(nx*nx + ny*ny + nz*nz);
-		
-		vertNormArr[k] /= mag;
-		vertNormArr[k+1] /= mag;
-		vertNormArr[k+2] /= mag;
+		normalise3f(&vertNormArr[k]);
 	}
 
 
@@ -414,18 +402,19 @@ void cross3f(GLfloat v1[3], GLfloat v2[3], GLfloat* out)
 
 /////////////////////////////////////////////////////////////////////////
 
-void normalise3f(GLfloat vin[3], GLfloat vout[3])
+void normalise3f(GLfloat v[3])
 {
-		GLfloat mag = sqrt(vin[0]*vin[0] + vin[1]*vin[1] + vin[2]*vin[2]);
+		// normalise vector
+		GLfloat mag = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
 
-		vout[0] /= mag;
-		vout[1] /= mag;
-		vout[2] /= mag;
+		v[0] /= mag;
+		v[1] /= mag;
+		v[2] /= mag;
 }
 
 /////////////////////////////////////////////////////////////////////////
 
-void triangleNormal_unnormalised(GLfloat pt1[3], GLfloat pt2[3], GLfloat pt3[3], GLfloat* out)
+void triangleNormal(GLfloat pt1[3], GLfloat pt2[3], GLfloat pt3[3], GLfloat* out)
 {
 	// edge vectors
 	GLfloat v1[3] = {0};
@@ -439,7 +428,7 @@ void triangleNormal_unnormalised(GLfloat pt1[3], GLfloat pt2[3], GLfloat pt3[3],
 	v2[1] = pt1[1] - pt3[1];
 	v2[2] = pt1[2] - pt3[2];
 
-	// calculate cross product (writes over out)
+	// calculate cross product and normalise (writes over out)
 	cross3f(v1,v2,out);
-	normalise3f(out, out);
+	normalise3f(out);
 }
