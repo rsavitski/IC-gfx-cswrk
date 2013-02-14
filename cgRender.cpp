@@ -43,6 +43,7 @@ void cleanup(void);	// memory cleanup registered with atexit()
 
 // Utility
 void cross3f(GLfloat v1[3], GLfloat v2[3], GLfloat* out);
+void normalise3f(GLfloat vin[3], GLfloat vout[3]);
 void triangleNormal_unnormalised(GLfloat pt1[3], GLfloat pt2[3], GLfloat pt3[3], GLfloat* out);
 
 /////////////////////////////////////////////////////////////////////////
@@ -413,6 +414,17 @@ void cross3f(GLfloat v1[3], GLfloat v2[3], GLfloat* out)
 
 /////////////////////////////////////////////////////////////////////////
 
+void normalise3f(GLfloat vin[3], GLfloat vout[3])
+{
+		GLfloat mag = sqrt(vin[0]*vin[0] + vin[1]*vin[1] + vin[2]*vin[2]);
+
+		vout[0] /= mag;
+		vout[1] /= mag;
+		vout[2] /= mag;
+}
+
+/////////////////////////////////////////////////////////////////////////
+
 void triangleNormal_unnormalised(GLfloat pt1[3], GLfloat pt2[3], GLfloat pt3[3], GLfloat* out)
 {
 	// edge vectors
@@ -429,4 +441,5 @@ void triangleNormal_unnormalised(GLfloat pt1[3], GLfloat pt2[3], GLfloat pt3[3],
 
 	// calculate cross product (writes over out)
 	cross3f(v1,v2,out);
+	normalise3f(out, out);
 }
