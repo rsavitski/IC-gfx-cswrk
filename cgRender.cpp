@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <math.h>
 
+
 // Macros
 #define VTK_FILE_PATH "./data/face.vtk"
 
@@ -12,14 +13,19 @@
 /* Using precompiled OpenGL lists for rendering since the geometry never changes,
 	very efficient as the data is cached on the GPU memory and is redrawn with one
 	function call */
+
+
 //c99 with c++ comments, display lists
 
 /* TODO: kill. Scratch area
 
-TODO: parametrise all dimensionalities in macros?
 
+TODO list:
+- camera control
+- (bounding box calculation?)
+- lighting control (c.f. tutors)
+- textures
 
-once done, iterate over <vertex normal array> and normalise all vectors
 
 array for tex data, iterate over it as above
 
