@@ -20,19 +20,13 @@
 /* TODO: kill. Scratch area
 
 
+NB: think about normals, can't just sum, need to normalise at each step? (otherwise dominated by longer crossproducts)
+
 TODO list:
 - camera control
-- (bounding box calculation?)
-- lighting control (c.f. tutors)
 - textures
 
-
 array for tex data, iterate over it as above
-
-once done, compile list and gogogo
-
-PS. might want to compute average xyz of vertex coords and the bounding box for setting up camera
-
 */
 
 
@@ -41,6 +35,7 @@ void init(void);
 void display(void);
 void reshape(int w, int h);
 void keyboard(unsigned char key, int x, int y);
+void idle(void);
 
 // Other prototypes
 void loadData(void);
@@ -49,6 +44,8 @@ void cleanup(void);	// memory cleanup registered with atexit()
 // Utility
 void cross3f(GLfloat v1[3], GLfloat v2[3], GLfloat* out);
 void triangleNormal_unnormalised(GLfloat pt1[3], GLfloat pt2[3], GLfloat pt3[3], GLfloat* out);
+
+/////////////////////////////////////////////////////////////////////////
 
 // Globals
 GLuint facelist = 0;	// display list handle
@@ -60,6 +57,19 @@ GLuint *polyArr = NULL; 		// (vertex indices for triangles)[] // Since assuming 
 
 long int vertNum = 0;
 long int polyNum = 0;
+
+// bounding box and midpt of loaded mesh
+GLfloat xyzMinBB[3] = { +INFINITY, +INFINITY, +INFINITY };
+GLfloat xyzMaxBB[3] = { -INFINITY, -INFINITY, -INFINITY };
+GLfloat meshMidpt[3] = {0,0,0};
+
+// camera position
+GLfloat camPos[3] = {0.6 ,0, 0};
+
+
+//TODO: temp
+GLfloat rotangle = 0;
+GLfloat light_pos2[] = {2.0, 10.0, 1.0, 1.0};	// position //TODO
 
 /////////////////////////////////////////////////////////////////////////
 
@@ -83,6 +93,7 @@ int main(int argc, char** argv)
 	glutDisplayFunc(display); 
 	glutReshapeFunc(reshape);
 	glutKeyboardFunc(keyboard);
+	glutIdleFunc(idle);
 
 	// Attach cleanup function to process termination
 	atexit(cleanup);
@@ -99,7 +110,7 @@ void init(void)
 	
 	glShadeModel (GL_SMOOTH);	// interpolation for poly from vertex colors
 	
-	//glEnable(GL_NORMALIZE);		// auto-normalisation, shouldn't affect performance due to display list architecture
+	//glEnable(GL_NORMALIZE);	// auto-normalisation, not used atm since loadData() normalises all normals properly
 	glEnable(GL_DEPTH_TEST);	// Z-buffer
 
 	
@@ -109,13 +120,13 @@ void init(void)
 	
 	// light and material parameters
 	GLfloat light_pos[] = {0.0, 2.0, 1.0, 0.0};	// position
-	GLfloat light_Ka[] = {0.4, 0.6 ,0.4, 1.0};	// ambient
+	GLfloat light_Ka[] = {0.4, 0.5 ,0.5, 1.0};	// ambient
 	GLfloat light_Kd[] = {1.0, 1.0, 1.0, 1.0};	// diffuse
 	GLfloat light_Ks[] = {0.5, 0.5, 0.5, 1.0};	// specular
 
 	GLfloat material_Ka[] = {0.4, 0.3, 0.3, 1.0};	// ambient reflectance
 	GLfloat material_Kd[] = {0.4, 0.4, 0.3, 1.0};	// diffuse reflectance
-	GLfloat material_Ks[] = {0.7, 0.3, 0.3, 1.0};	// specular reflectance
+	GLfloat material_Ks[] = {0.2, 0.3, 0.3, 1.0};	// specular reflectance
 	GLfloat material_Ke[] = {0.0, 0.0, 0.0, 0.0};	// emitted coefficients
 	GLfloat material_Se[] = {10};	// specular exponent
 	
@@ -165,8 +176,29 @@ void init(void)
 void display(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glLoadIdentity();
 	
-	// call precompiled display list
+	// <LIGHT>
+	// light positions specified here will be relative to view (since specified before view transformation)
+	// glLightfv(GL_LIGHT0, GL_POSITION, LIGHTPOS);
+	
+
+	// view transformation
+	gluLookAt(camPos[0], camPos[1], camPos[2],	// camera position
+			  meshMidpt[0], meshMidpt[1], meshMidpt[2],	// look at pt
+			  0,1,0);	// up vector
+
+
+	// <LIGHT>
+	// If needed, setting light pos specified here should be relative to the scene (view matrix already applied)	
+	// glLightfv(GL_LIGHT0, GL_POSITION, LIGHTPOS);
+
+
+	glRotatef(rotangle,0.0,1.0,0.0);
+
+	
+	// call precompiled display list to display mesh
 	glCallList(facelist);
 
 	glutSwapBuffers();
@@ -176,18 +208,16 @@ void display(void)
 
 void reshape(int w, int h)
 {
+	// viewport sizes
 	glViewport (0, 0, (GLsizei) w, (GLsizei) h); 
 
+	// projection
 	glMatrixMode (GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(45, 1, 0.2, 10);
-	
+		
 	glMatrixMode (GL_MODELVIEW);
-	glLoadIdentity();	//TODO
-	gluLookAt(0.5, 0, -0.02,	// camera pos
-			  0, -0.1, 0,	// look at pos
-			  0, 1, 0);	// up vector
-	
+	glLoadIdentity();
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -199,7 +229,22 @@ void keyboard(unsigned char key, int x, int y)
 		case 27: // ESC
 			exit(0);
 			break;
+		case '1':
+			// TEMP TODO
+			glPushMatrix();
+				rotangle += 5;
+				glRotatef(rotangle,1.0,0.0,0.0);
+				glLightfv(GL_LIGHT0, GL_POSITION, light_pos2);
+			glPopMatrix();
+			glutPostRedisplay();
 	}
+}
+
+/////////////////////////////////////////////////////////////////////////
+
+void idle(void)
+{
+	//glutPostRedisplay();	
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -291,7 +336,7 @@ void loadData(void)
 
 
 	// Normalise all normals
-	for (int i=0; i<vertNum; i++)
+	for (int i=0; i<vertNum; ++i)
 	{
 		// k: start of 3-float tuple with Nx,Ny,Nz components
 		int k = i*3;
@@ -306,8 +351,30 @@ void loadData(void)
 		vertNormArr[k+1] /= mag;
 		vertNormArr[k+2] /= mag;
 	}
+
+
+	// Bounding box calculation of mesh, possible optimisation: move into reading of the data part
+	for (int i=0; i<vertNum; ++i)
+	{
+		// k: start of 3-tuple with x,y,z coordinates of vertex
+		int k=i*3;
+
+		// bounding values initialised in the globals section
+		for (int j=0; j<3; ++j)
+		{
+			if (vertCoordArr[k+j] < xyzMinBB[j])
+					xyzMinBB[j] = vertCoordArr[k+j];
+			else if (vertCoordArr[k+j] > xyzMaxBB[j])
+					xyzMaxBB[j] = vertCoordArr[k+j];
+		}
+	}
+
+	// calculate midpoint of bounding box
+	meshMidpt[0] = (xyzMinBB[0]+xyzMaxBB[0])/2;
+	meshMidpt[1] = (xyzMinBB[1]+xyzMaxBB[1])/2;
+	meshMidpt[2] = (xyzMinBB[2]+xyzMaxBB[2])/2;
 	
-	
+		
 	// TODO:	TEXTURE DATA PROCESSING HERE
 	//getline(&buf, &bufsize, vtk_fdesc); 
 	//getline(&buf, &bufsize, vtk_fdesc); 
