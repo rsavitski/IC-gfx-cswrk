@@ -5,24 +5,14 @@
 #include <stdio.h>
 #include <math.h>
 
-
 // Macros
 #define VTK_FILE_PATH "./data/face.vtk"
 #define PPM_FILE_PATH "./data/face.ppm"
 
+
 /* Using precompiled OpenGL lists for rendering since the geometry never changes,
 	very efficient as the data is cached on the GPU memory and is redrawn with one
 	function call */
-
-
-//c99 with c++ comments, display lists
-
-/* TODO: kill. Scratch area
-
-TODO list:
-free tex memory after binding?
-see how to make texturing toggleable
-*/
 
 
 // GLUT callbacks
@@ -67,8 +57,10 @@ GLfloat meshMidpt[3] = {0,0,0};
 // camera position
 GLfloat camPos[3] = {0.6, 0, 0};
 
-// rotation angle for demo ('w' key)
-GLfloat rotangle = 0;
+// demo vars
+GLfloat rotangle = 0; // rotation angle for demo ('w' key)
+char showTex = 1; 	// texturing on/off ('e' key)
+
 
 /////////////////////////////////////////////////////////////////////////
 
@@ -143,19 +135,22 @@ void init(void)
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, material_Se);
 
 
+	// enable textures
+	glEnable(GL_TEXTURE_2D);
+
 	// allocate a texture handle
 	glGenTextures(1, &texHandle);
 
 	// select texture
 	glBindTexture(GL_TEXTURE_2D, texHandle);
 
-	// select modulate to mix texture with colour for shading
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	// texture application
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE); //TODO; GL_MODULATE + lights
 
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	// clamp texture at edges
+	// clamp texture edges
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
@@ -163,7 +158,6 @@ void init(void)
 
 	// assign texture
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, texW, texH, 0, GL_RGB, GL_UNSIGNED_BYTE, texRGB);
-
 	
 	// create display list (very efficient as the geometry is static)
 	facelist = glGenLists(1);
@@ -180,19 +174,21 @@ void init(void)
 
 				// pick normals, coordinates and texture for all vertices
 				glNormal3f(vertNormArr[vertIndx1*3], vertNormArr[vertIndx1*3+1], vertNormArr[vertIndx1*3+2]);
-				glVertex3f(vertCoordArr[vertIndx1*3], vertCoordArr[vertIndx1*3+1], vertCoordArr[vertIndx1*3+2]);
 				glTexCoord2f(vertTexArr[vertIndx1*2], vertTexArr[vertIndx1*2+1]);
+				glVertex3f(vertCoordArr[vertIndx1*3], vertCoordArr[vertIndx1*3+1], vertCoordArr[vertIndx1*3+2]);
 
 				glNormal3f(vertNormArr[vertIndx2*3], vertNormArr[vertIndx2*3+1], vertNormArr[vertIndx2*3+2]);
-				glVertex3f(vertCoordArr[vertIndx2*3], vertCoordArr[vertIndx2*3+1], vertCoordArr[vertIndx2*3+2]);
 				glTexCoord2f(vertTexArr[vertIndx2*2], vertTexArr[vertIndx2*2+1]);
+				glVertex3f(vertCoordArr[vertIndx2*3], vertCoordArr[vertIndx2*3+1], vertCoordArr[vertIndx2*3+2]);
 				
 				glNormal3f(vertNormArr[vertIndx3*3], vertNormArr[vertIndx3*3+1], vertNormArr[vertIndx3*3+2]);
-				glVertex3f(vertCoordArr[vertIndx3*3], vertCoordArr[vertIndx3*3+1], vertCoordArr[vertIndx3*3+2]);
 				glTexCoord2f(vertTexArr[vertIndx3*2], vertTexArr[vertIndx3*2+1]);
+				glVertex3f(vertCoordArr[vertIndx3*3], vertCoordArr[vertIndx3*3+1], vertCoordArr[vertIndx3*3+2]);
 			glEnd();
 		}
 	glEndList();
+
+	free(texRGB); // no longer needed
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -201,6 +197,12 @@ void display(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	if (showTex==1)
+	{
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, texHandle);
+	}
+	
 	glLoadIdentity();
 	
 	// <LIGHT>
@@ -226,8 +228,10 @@ void display(void)
 	// call precompiled display list to display mesh
 	glCallList(facelist);
 
-	// TODO
-	//glDisable(GL_TEXTURE_2D);
+	if (showTex==1)
+	{
+		glDisable(GL_TEXTURE_2D);	// apparently good practice
+	}
 
 	glutSwapBuffers();
 }
@@ -262,6 +266,12 @@ void keyboard(unsigned char key, int x, int y)
 			rotangle += 5;
 			rotangle = rotangle > 360 ? rotangle-360 : rotangle;
 			glutPostRedisplay();
+			break;
+		case 'e':
+			// toggle texturing
+			showTex = !(showTex);
+			glutPostRedisplay();
+			break;
 	}
 }
 
@@ -426,9 +436,9 @@ void loadData(void)
 	fscanf(ppm_fdesc, "%u ", &texW);
 	fscanf(ppm_fdesc, "%u ", &texH);
 
-	// max intensity, will not handle anything >255 (multi-byte)i
+	// max intensity, will not handle anything >255 (multi-byte)
 	GLuint texMaxval = 0;
-	fscanf(ppm_fdesc, "%u ", &texMaxval);
+	fscanf(ppm_fdesc, "%u", &texMaxval);
 	if (texMaxval > 255)
 	{
 		fprintf(stderr, "Application can't handle ppm files with >255 max intensity\n");
