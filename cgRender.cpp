@@ -10,6 +10,10 @@
 #define PPM_FILE_PATH "./data/face.ppm"
 
 
+/* Demo controls: 'w' (hold) for rotation, 'e' for toggling textures.
+   The code should be c99 compliant, with the sole exception of C++ comments */
+
+
 /* Using precompiled OpenGL lists for rendering since the geometry never changes,
 	very efficient as the data is cached on the GPU memory and is redrawn with one
 	function call */
