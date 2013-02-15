@@ -8,7 +8,7 @@
 
 // Macros
 #define VTK_FILE_PATH "./data/face.vtk"
-
+#define PPM_FILE_PATH "./data/face.ppm"
 
 /* Using precompiled OpenGL lists for rendering since the geometry never changes,
 	very efficient as the data is cached on the GPU memory and is redrawn with one
@@ -20,9 +20,8 @@
 /* TODO: kill. Scratch area
 
 TODO list:
-- textures
-
-array for tex data, iterate over it as above
+free tex memory after binding?
+see how to make texturing toggleable
 */
 
 
@@ -54,6 +53,11 @@ GLuint *polyArr = NULL; 		// (vertex indices for triangles)[] // Since assuming 
 
 long int vertNum = 0;
 long int polyNum = 0;
+
+GLuint texHandle = 0;
+GLchar *texRGB = NULL;			// texture RGB bytes
+GLuint texW = 0;				// texture width
+GLuint texH = 0;				// texture height
 
 // bounding box and midpt of loaded mesh
 GLfloat xyzMinBB[3] = { +INFINITY, +INFINITY, +INFINITY };
@@ -138,6 +142,28 @@ void init(void)
 	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, material_Ke);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, material_Se);
 
+
+	// allocate a texture handle
+	glGenTextures(1, &texHandle);
+
+	// select texture
+	glBindTexture(GL_TEXTURE_2D, texHandle);
+
+	// select modulate to mix texture with colour for shading
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// clamp texture at edges
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+
+	// assign texture
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, texW, texH, 0, GL_RGB, GL_UNSIGNED_BYTE, texRGB);
+
 	
 	// create display list (very efficient as the geometry is static)
 	facelist = glGenLists(1);
@@ -152,15 +178,18 @@ void init(void)
 				GLuint vertIndx2 = polyArr[i*3+1];
 				GLuint vertIndx3 = polyArr[i*3+2];
 
-				// pick normals and coordinates for all vertices
+				// pick normals, coordinates and texture for all vertices
 				glNormal3f(vertNormArr[vertIndx1*3], vertNormArr[vertIndx1*3+1], vertNormArr[vertIndx1*3+2]);
 				glVertex3f(vertCoordArr[vertIndx1*3], vertCoordArr[vertIndx1*3+1], vertCoordArr[vertIndx1*3+2]);
-				
+				glTexCoord2f(vertTexArr[vertIndx1*2], vertTexArr[vertIndx1*2+1]);
+
 				glNormal3f(vertNormArr[vertIndx2*3], vertNormArr[vertIndx2*3+1], vertNormArr[vertIndx2*3+2]);
 				glVertex3f(vertCoordArr[vertIndx2*3], vertCoordArr[vertIndx2*3+1], vertCoordArr[vertIndx2*3+2]);
+				glTexCoord2f(vertTexArr[vertIndx2*2], vertTexArr[vertIndx2*2+1]);
 				
 				glNormal3f(vertNormArr[vertIndx3*3], vertNormArr[vertIndx3*3+1], vertNormArr[vertIndx3*3+2]);
 				glVertex3f(vertCoordArr[vertIndx3*3], vertCoordArr[vertIndx3*3+1], vertCoordArr[vertIndx3*3+2]);
+				glTexCoord2f(vertTexArr[vertIndx3*2], vertTexArr[vertIndx3*2+1]);
 			glEnd();
 		}
 	glEndList();
@@ -359,13 +388,60 @@ void loadData(void)
 	meshMidpt[2] = (xyzMinBB[2]+xyzMaxBB[2])/2;
 	
 		
-	// TODO:	TEXTURE DATA PROCESSING HERE
-	//getline(&buf, &bufsize, vtk_fdesc); 
-	//getline(&buf, &bufsize, vtk_fdesc); 
-	//printf("%s", buf);
+	// Load texture data
+	getline(&buf, &bufsize, vtk_fdesc); // throw away texture entry count, same as vertNum
+	getline(&buf, &bufsize, vtk_fdesc); // throw away
 
-	// temp test
-	//fscanf(vtk_fdesc, "%f ", &vertTexArr[2]);
+	// populate vertex texture array with texel (x,y) tuples
+	for (int i=0; i<vertNum; ++i)
+	{
+		fscanf(vtk_fdesc, "%f ", &vertTexArr[i*2]);
+		fscanf(vtk_fdesc, "%f ", &vertTexArr[i*2+1]);
+	}
+
+	// done with Vtk file at this point
+	fclose(vtk_fdesc);
+
+
+	// Load texture file
+	FILE *ppm_fdesc = fopen(PPM_FILE_PATH, "r");
+	if (ppm_fdesc == NULL)
+	{
+		fprintf(stderr, "Can't open PPM at: %s\n", PPM_FILE_PATH);
+		exit(-1);
+	}
+	
+	// read header
+	getline(&buf, &bufsize, vtk_fdesc); 
+	if (buf[0] != 'P' || buf[1] != '6')
+	{
+		fprintf(stderr, "PPM file magic bytes wrong\n");
+		exit(-1);
+	}
+
+	// read height and width of the image
+	fscanf(ppm_fdesc, "%u ", &texW);
+	fscanf(ppm_fdesc, "%u ", &texH);
+
+	// max intensity, will not handle anything >255 (multi-byte)i
+	GLuint texMaxval = 0;
+	fscanf(ppm_fdesc, "%u ", &texMaxval);
+	if (texMaxval > 255)
+	{
+		fprintf(stderr, "Application can't handle ppm files with >255 max intensity\n");
+	}
+	
+	// consume separator byte
+	getc(ppm_fdesc);
+
+	// allocate memory for RGB data
+	if (!(texRGB = (GLchar*) malloc(texW*texH*3*sizeof(GLchar)))) { fprintf(stderr, "malloc failed\n"); exit(-1); }
+
+	// read in the rgb from image
+	if (fread(texRGB, 1, texW*texH*3, ppm_fdesc) != texW*texH*3) { fprintf(stderr, "reading texture failed\n"); exit(-1); }
+
+	// done reading image data
+	fclose(ppm_fdesc);
 
 	// cleanup	
 	free(buf);
