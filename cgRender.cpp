@@ -488,12 +488,12 @@ void cross3f(GLfloat v1[3], GLfloat v2[3], GLfloat* out)
 
 void normalise3f(GLfloat v[3])
 {
-		// normalise vector
-		GLfloat mag = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+	// normalise vector
+	GLfloat mag = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
 
-		v[0] /= mag;
-		v[1] /= mag;
-		v[2] /= mag;
+	v[0] /= mag;
+	v[1] /= mag;
+	v[2] /= mag;
 }
 
 /////////////////////////////////////////////////////////////////////////
