@@ -61,12 +61,10 @@ GLfloat xyzMaxBB[3] = { -INFINITY, -INFINITY, -INFINITY };
 GLfloat meshMidpt[3] = {0,0,0};
 
 // camera position
-GLfloat camPos[3] = {0.6 ,0, 0};
+GLfloat camPos[3] = {0.6, 0, 0};
 
-
-//TODO: temp
+// rotation angle for demo ('w' key)
 GLfloat rotangle = 0;
-GLfloat light_pos2[] = {2.0, 10.0, 1.0, 1.0};	// position //TODO
 
 /////////////////////////////////////////////////////////////////////////
 
@@ -192,7 +190,7 @@ void display(void)
 	// glLightfv(GL_LIGHT0, GL_POSITION, LIGHTPOS);
 
 
-	// TODO
+	// rotation of the model (controlled by 'w' key)
 	glRotatef(rotangle,0.0,1.0,0.0);
 
 	
@@ -227,13 +225,10 @@ void keyboard(unsigned char key, int x, int y)
 		case 27: // ESC
 			exit(0);
 			break;
-		case '1':
-			// TEMP TODO
-			glPushMatrix();
-				rotangle += 5;
-				glRotatef(rotangle,1.0,0.0,0.0);
-				glLightfv(GL_LIGHT0, GL_POSITION, light_pos2);
-			glPopMatrix();
+		case 'w':
+			// rotate
+			rotangle += 5;
+			rotangle = rotangle > 360 ? rotangle-360 : rotangle;
 			glutPostRedisplay();
 	}
 }
