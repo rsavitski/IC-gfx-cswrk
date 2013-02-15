@@ -150,7 +150,7 @@ void init(void)
 	glBindTexture(GL_TEXTURE_2D, texHandle);
 
 	// select modulate to mix texture with colour for shading
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -225,6 +225,9 @@ void display(void)
 	
 	// call precompiled display list to display mesh
 	glCallList(facelist);
+
+	// TODO
+	//glDisable(GL_TEXTURE_2D);
 
 	glutSwapBuffers();
 }
